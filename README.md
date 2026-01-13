@@ -97,6 +97,25 @@ meshstellar import
 meshstellar web
 ```
 
+### NixOS
+
+Enable the service and configure at least some mqtt host settings:
+
+```nix
+{
+  imports = [ meshstellar.nixosModules.default ];
+  services.meshstellar = {
+    enable = true;
+    environmentFile = config.sops.secrets.meshstellar-env.path;
+    settings = {
+      http_addr = "0.0.0.0:3000";
+      mqtt_host = "your.mqtt.host";
+      mqtt_username = "meshdev";
+    };
+  };
+}
+```
+
 ## Contributing
 
 Your contributions and feedback are welcome!
