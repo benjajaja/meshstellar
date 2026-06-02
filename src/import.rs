@@ -668,6 +668,14 @@ async fn handle_raw_service_envelope(
 ) -> anyhow::Result<()> {
     if let Ok(message) = ServiceEnvelope::decode(service_envelope)
         && let Some(mut packet) = message.packet {
+            if crate::util::config::get_config()
+                .get_bool("only_rf_packets")
+                .unwrap_or(false)
+                && packet.via_mqtt
+            {
+                return Ok(());
+            }
+
             if let Some(proto::meshtastic::mesh_packet::PayloadVariant::Encrypted(
                 encrypted_payload,
             )) = packet.payload_variant.clone()
