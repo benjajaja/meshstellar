@@ -46,19 +46,39 @@
         };
       });
 
-      devShells = forAllSystems (pkgs: {
-        default = pkgs.mkShell {
-          buildInputs = [
-            pkgs.cargo
-            pkgs.rustc
-            pkgs.protobuf
-            pkgs.sqlx-cli
-          ];
+      devShells = forAllSystems (pkgs:
+          let
+            protobufs = pkgs.fetchgit {
+              url = "https://github.com/meshtastic/protobufs.git";
+              rev = "4c4427c4a73c86fed7dc8632188bb8be95349d81";
+              hash = "sha256-t4LmJI4+sPD6t4gfNy0gqVnehpvim0rbqVARcMCpgAQ=";
+            };
+          in {
+            default = pkgs.mkShell {
+              buildInputs = [
+                pkgs.cargo
+                pkgs.rustc
+                pkgs.protobuf
+                pkgs.sqlx-cli
+              ];
 
-          PROTOC = "${pkgs.protobuf}/bin/protoc";
-          SQLX_OFFLINE = "true";
-        };
-      });
+              PROTOC = "${pkgs.protobuf}/bin/protoc";
+              SQLX_OFFLINE = "true";
+
+              shellHook = ''
+                # ensure expected path exists for build.rs
+                if [ ! -d ./protobufs ] || [ -L ./protobufs ]; then
+                  rm -rf ./protobufs
+                  cp -r ${protobufs} ./protobufs
+                  chmod -R u+w ./protobufs
+                fi
+                export DATABASE_URL="sqlite:$TMPDIR/meshstellar.db?mode=rwc"
+                sqlx database create
+                sqlx migrate run
+                cargo sqlx prepare
+              '';
+            };
+          });
     } // {
       nixosModules.default = { config, lib, pkgs, ... }:
         let
